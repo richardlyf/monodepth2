@@ -82,6 +82,14 @@ class MonodepthOptions:
                                  type=int,
                                  help="frames to load",
                                  default=[0, -1, 1])
+        self.parser.add_argument("--max_train_size",
+                                 type=int,
+                                 help="max training samples",
+                                 default=30000)
+        self.parser.add_argument("--max_val_size",
+                                 type=int,
+                                 help="max val samples",
+                                 default=3000)
 
         # OPTIMIZATION options
         self.parser.add_argument("--batch_size",
