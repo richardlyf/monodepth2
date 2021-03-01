@@ -19,7 +19,7 @@ class NYUDataset(MonoDataset):
     def __init__(self, *args, **kwargs):
         super(NYUDataset, self).__init__(*args, **kwargs)
 
-        # NOTE: Make sure your intrinsics matrix is *normalized* by the original image size    
+        # NOTE: Make sure your intrinsics matrix is *normalized* by the original image size
         self.K = np.array([[5.1885790117450188e+02, 0, 3.2558244941119034e+02, 0],
                            [0, 5.1946961112127485e+02, 2.5373616633400465e+02, 0],
                            [0, 0, 1, 0],
