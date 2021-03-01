@@ -14,6 +14,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
+from tqdm import tqdm
 
 import json
 
@@ -186,7 +187,7 @@ class Trainer:
         self.epoch = 0
         self.step = 0
         self.start_time = time.time()
-        for self.epoch in range(self.opt.num_epochs):
+        for self.epoch in tqdm(range(self.opt.num_epochs)):
             self.run_epoch()
             if (self.epoch + 1) % self.opt.save_frequency == 0:
                 self.save_model()
@@ -194,12 +195,8 @@ class Trainer:
     def run_epoch(self):
         """Run a single epoch of training and validation
         """
-        self.model_lr_scheduler.step()
-
-        print("Training")
         self.set_train()
-
-        for batch_idx, inputs in enumerate(self.train_loader):
+        for batch_idx, inputs in tqdm(enumerate(self.train_loader)):
 
             before_op_time = time.time()
 
@@ -225,6 +222,7 @@ class Trainer:
                 self.val()
 
             self.step += 1
+        self.model_lr_scheduler.step()
 
     def process_batch(self, inputs):
         """Pass a minibatch through the network and generate images and losses
