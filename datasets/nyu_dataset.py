@@ -16,8 +16,6 @@ from .mono_dataset import MonoDataset
 
 
 class NYUDataset(MonoDataset):
-    """Superclass for different types of KITTI dataset loaders
-    """
     def __init__(self, *args, **kwargs):
         super(NYUDataset, self).__init__(*args, **kwargs)
 
@@ -31,8 +29,8 @@ class NYUDataset(MonoDataset):
         self.archive = np.load(os.path.join(self.data_path, "nyu_archive.npy"), allow_pickle=True).item()
 
     def check_depth(self):
-    """We don't include depth data, because we can't use the mat function to reproject depth to rgb
-    """
+        """We don't include depth data, because we can't use the mat function to reproject depth to rgb
+        """
         return False
 
     def get_color(self, folder, frame_index, side, do_flip):
@@ -43,14 +41,8 @@ class NYUDataset(MonoDataset):
 
         return color
 
-class NYUDepthDataset(NYUDataset):
-    """KITTI dataset which uses the updated ground truth depth maps
-    """
-    def __init__(self, *args, **kwargs):
-        super(NYUDepthDataset, self).__init__(*args, **kwargs)
-
     def get_image_path(self, folder, frame_index):
-        image_name = archive[folder][frame_index][1][:-3] + 'jpg'
+        image_name = self.archive[folder][frame_index][1][:-3] + 'jpg'
         image_path = os.path.join(
             self.data_path,
             folder,
