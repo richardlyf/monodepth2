@@ -48,3 +48,24 @@ class NYUDataset(MonoDataset):
             folder,
             image_name)
         return image_path
+
+
+class NYULabeledDataset(NYUDataset):
+    def __init__(self, *args, **kwargs):
+        super(NYULabeledDataset, self).__init__(*args, **kwargs)
+
+    def get_image_path(self, folder, frame_index, side):
+        image_name = "{:3d}.jpg".format(frame_index)
+        image_path = os.path.join(self.data_path, 'image', image_name)
+        return image_path
+
+    def get_depth(self, folder, frame_index, side, do_flip):
+        depth_name = "{:3d}.npy".format(frame_index)
+        depth_path = os.path.join(self.data_path, 'depth', depth_name)
+
+        depth_gt = np.load(depth_name, allow_pickle=True)
+
+        if do_flip:
+            depth_gt = np.fliplr(depth_gt)
+
+        return depth_gt
