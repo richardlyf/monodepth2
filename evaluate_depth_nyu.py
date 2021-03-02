@@ -160,7 +160,7 @@ def evaluate(opt):
         pred_disp = pred_disps[i]
         pred_disp = cv2.resize(pred_disp, (gt_width, gt_height))
         pred_depth = 1 / pred_disp
-        
+
         mask = gt_depth > 0
 
         pred_depth = pred_depth[mask]
