@@ -52,7 +52,7 @@ class MonodepthOptions:
         self.parser.add_argument("--height",
                                  type=int,
                                  help="input image height",
-                                 default=480)
+                                 default=192)
         self.parser.add_argument("--width",
                                  type=int,
                                  help="input image width",
@@ -73,10 +73,20 @@ class MonodepthOptions:
         self.parser.add_argument("--max_depth",
                                  type=float,
                                  help="maximum depth",
-                                 default=10.0)
+                                 default=100.0)
         self.parser.add_argument("--use_stereo",
                                  help="if set, uses stereo pair for training",
                                  action="store_true")
+        self.parser.add_argument("--use_feature",
+                                 help="if set, uses feature metric loss",
+                                 action="store_true")
+        self.parser.add_argument("--autoencoder_pretrained_path",
+                                 help="path to pretrained feature encoder",
+                                 default="autoencoder.pth")
+        self.parser.add_argument("--perception_weight",
+                                 type=float,
+                                 help="weight for feature-metric loss",
+                                 default=1e-3)
         self.parser.add_argument("--frame_ids",
                                  nargs="+",
                                  type=int,
@@ -189,7 +199,7 @@ class MonodepthOptions:
                                  help="optional path to a .npy disparities file to evaluate")
         self.parser.add_argument("--eval_split",
                                  type=str,
-                                 default="nyu_labeled",
+                                 default="eigen",
                                  choices=[
                                     "eigen", "eigen_benchmark", "benchmark", "odom_9", "odom_10", "nyu_labeled"],
                                  help="which split to run eval on")

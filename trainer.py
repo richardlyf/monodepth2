@@ -62,6 +62,12 @@ class Trainer:
         self.models["depth"].to(self.device)
         self.parameters_to_train += list(self.models["depth"].parameters())
 
+        if self.opt.use_feature:
+            # Doesn't include weights for optimization
+            self.models["feature"] = networks.FeatureEncoder(
+                self.opt.num_layers, os.path.expanduser(self.opt.autoencoder_pretrained_path))
+            self.models["feature"].to(self.device)
+
         if self.use_pose_net:
             if self.opt.pose_model_type == "separate_resnet":
                 self.models["pose_encoder"] = networks.ResnetEncoder(
@@ -258,6 +264,8 @@ class Trainer:
             outputs.update(self.predict_poses(inputs, features))
 
         self.generate_images_pred(inputs, outputs)
+        if self.opt.use_feature:
+            self.generate_features_pred(inputs, outputs)
         losses = self.compute_losses(inputs, outputs)
 
         return outputs, losses
@@ -393,6 +401,45 @@ class Trainer:
                     outputs[("color_identity", frame_id, scale)] = \
                         inputs[("color", frame_id, source_scale)]
 
+    def generate_features_pred(self, inputs, outputs):
+        """Generate features for feature-metric loss"""
+        scale = 0
+        disp = outputs[("disp", scale)]
+        feat_disp = F.interpolate(disp, [int(self.opt.height/2), int(self.opt.width/2)], mode="bilinear", align_corners=False)
+        _, feat_depth = self.disp_to_depth(feat_disp, self.opt.min_depth, self.opt.max_depth)
+        for i, frame_id in enumerate(self.opt.frame_ids[1:]):
+            if frame_id == "s":
+                T = inputs["stereo_T"]
+            else:
+                T = outputs[("cam_T_cam", 0, frame_id)]
+
+            backproject = BackprojectDepth(self.opt.batch_size, int(self.opt.height/2), int(self.opt.width/2))
+            project = Project3D(self.opt.batch_size, int(self.opt.height/2), int(self.opt.width/2))
+            backproject.to(self.device)
+            project.to(self.device)
+
+            K = inputs[("K", 0)].clone()
+            K[:, 0, :] /= 2
+            K[:, 1, :] /= 2
+
+            inv_K = torch.zeros_like(K)
+            for i in range(inv_K.shape[0]):
+                inv_K[i, :, :] = torch.pinverse(K[i, :, :])
+
+            feat_cam_points = backproject(feat_depth, inv_K)
+            feat_pix_coords = project(feat_cam_points, K, T)
+            img = inputs[("color", frame_id, 0)]
+            src_f = self.models["feature"](img)[0]
+            outputs[("feature", frame_id, 0)] = F.grid_sample(src_f, feat_pix_coords, padding_mode="border")        
+    
+    def robust_l1(self, pred, target):
+        eps = 1e-3
+        return torch.sqrt(torch.pow(target - pred, 2) + eps ** 2)
+
+    def compute_perceptional_loss(self, tgt_f, src_f):
+        loss = self.robust_l1(tgt_f, src_f).mean(1, True)
+        return loss
+
     def compute_reprojection_loss(self, pred, target):
         """Computes reprojection loss between a batch of predicted and target images
         """
@@ -485,6 +532,17 @@ class Trainer:
                     idxs > identity_reprojection_loss.shape[1] - 1).float()
 
             loss += to_optimise.mean()
+
+            if self.opt.use_feature:
+                perceptional_losses = []
+                for frame_id in self.opt.frame_ids[1:]:
+                    src_f = outputs[("feature", frame_id, 0)]
+                    tgt_f = self.models["feature"](inputs[("color", 0, 0)])[0]
+                    perceptional_losses.append(self.compute_perceptional_loss(tgt_f, src_f))
+                perceptional_loss = torch.cat(perceptional_losses, 1)
+
+                min_perceptional_loss, min_idxs = torch.min(perceptional_loss, dim=1)
+                loss += self.opt.perception_weight * min_perceptional_loss.mean()
 
             mean_disp = disp.mean(2, True).mean(3, True)
             norm_disp = disp / (mean_disp + 1e-7)
