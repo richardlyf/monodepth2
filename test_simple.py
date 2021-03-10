@@ -61,8 +61,11 @@ def test_simple(args):
     else:
         device = torch.device("cpu")
 
-    download_model_if_doesnt_exist(args.model_name)
-    model_path = os.path.join("models", args.model_name)
+    # download_model_if_doesnt_exist(args.model_name)
+    # model_path = os.path.join("models", args.model_name)
+    model_path = os.path.expanduser('~/log/feate5_nyu_5epoch/models/weights_3')
+    # model_path = os.path.expanduser('~/log/ft_stereo_1e-4/models/weights_4')
+    # model_path = os.path.expanduser('~/monodepth2/models/stereo_640x192/')
     print("-> Loading model from ", model_path)
     encoder_path = os.path.join(model_path, "encoder.pth")
     depth_decoder_path = os.path.join(model_path, "depth.pth")

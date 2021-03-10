@@ -64,8 +64,8 @@ class Trainer:
 
         if self.opt.use_feature:
             # Doesn't include weights for optimization
-            self.models["feature"] = networks.FeatureEncoder(
-                self.opt.num_layers, os.path.expanduser(self.opt.autoencoder_pretrained_path))
+            self.models["feature"] = self.build_feature_encoder(
+                50, os.path.expanduser(self.opt.autoencoder_pretrained_path))
             self.models["feature"].to(self.device)
 
         if self.use_pose_net:
@@ -178,6 +178,16 @@ class Trainer:
             len(train_dataset), len(val_dataset)))
 
         self.save_opts()
+
+    def build_feature_encoder(self, num_layers, pretrained_path):
+        extractor = networks.FeatureEncoder(num_layers, None)
+        if pretrained_path is not None:
+            checkpoint = torch.load(pretrained_path, map_location='cpu')
+            for name, param in extractor.state_dict().items():
+                extractor.state_dict()[name].copy_(checkpoint['state_dict']['Encoder.' + name])
+            for param in extractor.parameters():
+                param.requires_grad = False
+        return extractor
 
     def set_train(self):
         """Convert all models to training mode
@@ -406,7 +416,7 @@ class Trainer:
         scale = 0
         disp = outputs[("disp", scale)]
         feat_disp = F.interpolate(disp, [int(self.opt.height/2), int(self.opt.width/2)], mode="bilinear", align_corners=False)
-        _, feat_depth = self.disp_to_depth(feat_disp, self.opt.min_depth, self.opt.max_depth)
+        _, feat_depth = disp_to_depth(feat_disp, self.opt.min_depth, self.opt.max_depth)
         for i, frame_id in enumerate(self.opt.frame_ids[1:]):
             if frame_id == "s":
                 T = inputs["stereo_T"]
@@ -430,8 +440,8 @@ class Trainer:
             feat_pix_coords = project(feat_cam_points, K, T)
             img = inputs[("color", frame_id, 0)]
             src_f = self.models["feature"](img)[0]
-            outputs[("feature", frame_id, 0)] = F.grid_sample(src_f, feat_pix_coords, padding_mode="border")        
-    
+            outputs[("feature", frame_id, 0)] = F.grid_sample(src_f, feat_pix_coords, padding_mode="border")
+
     def robust_l1(self, pred, target):
         eps = 1e-3
         return torch.sqrt(torch.pow(target - pred, 2) + eps ** 2)

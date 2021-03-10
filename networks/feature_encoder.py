@@ -7,7 +7,7 @@ from .resnet import resnet18, resnet34, resnet50, resnet101
 
 class FeatureEncoder(nn.Module):
     def __init__(self, num_layers, pretrained_path=None):
-        super(Encoder, self).__init__()
+        super(FeatureEncoder, self).__init__()
 
         self.num_ch_enc = np.array([64, 64, 128, 256, 512])
 
